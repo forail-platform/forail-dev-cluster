@@ -1,5 +1,7 @@
 # forge-dev-cluster
 
+[![CI](https://github.com/forgeplatform/forge-dev-cluster/actions/workflows/ci.yml/badge.svg)](https://github.com/forgeplatform/forge-dev-cluster/actions/workflows/ci.yml)
+
 A 7-node Kubernetes test cluster (3 control-plane + 4 worker) on Vagrant +
 VirtualBox/libvirt. Used as the development / test environment for the Forge
 Platform components (`forge-deploy` k8s manifests, `forge-operator`,
