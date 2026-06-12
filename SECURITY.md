@@ -27,7 +27,7 @@ Include:
 
 In scope:
 
-- forge-dev-cluster scripts (`server-init.sh`, `server-join.sh`, `agent-join.sh`, `post-cluster-setup.sh`)
+- forail-dev-cluster scripts (`server-init.sh`, `server-join.sh`, `agent-join.sh`, `post-cluster-setup.sh`)
 - Vagrant provisioning and default credentials
 - k3s configuration that exposes the cluster insecurely by default
 

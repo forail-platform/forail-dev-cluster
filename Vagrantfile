@@ -1,7 +1,7 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 #
-# Forge Platform — k8s test environment (multi-VM, HA control plane)
+# Forail Platform — k8s test environment (multi-VM, HA control plane)
 #
 # Layout:
 #   k8s-m1  192.168.56.30  server (cluster-init, embedded etcd)
@@ -25,7 +25,7 @@
 #   vagrant destroy -f
 
 # Pre-shared token for all k3s nodes. Dev-only — do not reuse for prod.
-K3S_TOKEN = "forge-dev-cluster-shared-token-do-not-reuse"
+K3S_TOKEN = "forail-dev-cluster-shared-token-do-not-reuse"
 K3S_VERSION = "v1.30.4+k3s1"
 INIT_SERVER_IP = "192.168.56.30"
 

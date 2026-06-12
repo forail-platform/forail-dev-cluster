@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Forge dev-cluster will be documented in
+All notable changes to the Forail dev-cluster will be documented in
 this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
@@ -17,12 +17,12 @@ and the project adheres to CalVer (`YYYY.MM.PATCH`).
   (was 2 vCPU / 2 GB) → 14 vCPU, 28 GB total. Reasoning: 3-node etcd
   quorum tolerates a single master failure (was 2-node quorum, which
   loses the cluster on any master loss), and 4 GB per VM avoids OOM
-  once `forge-helm` + `forge-operator` + the AI assistant are deployed.
+  once `forail-helm` + `forail-operator` + the AI assistant are deployed.
 - **Switched distribution from kubeadm to k3s** (v1.30.4+k3s1). k3s
   bundles Traefik (default ingress), local-path-provisioner (default
   StorageClass), klipper-lb (servicelb), CoreDNS, and metrics-server,
   so `post-cluster-setup.sh` collapsed from 4 stages to creating just
-  the `forge` namespace + Harbor pull-secret + self-signed TLS cert.
+  the `forail` namespace + Harbor pull-secret + self-signed TLS cert.
   No separate Helm/Traefik install step needed.
 - **HA control plane via embedded etcd**: first server runs
   `k3s server --cluster-init`, the other two join with `--server`.
@@ -47,7 +47,7 @@ and the project adheres to CalVer (`YYYY.MM.PATCH`).
 
 ### Changed
 - `post-cluster-setup.sh` and `README.md` now reference the
-  `forge-helm` chart at `../forge-helm` (was `../forge-deploy/helm`
+  `forail-helm` chart at `../forail-helm` (was `../forail-deploy/helm`
   before the chart was extracted into its own repo)
 
 ## [2026.03.0] - 2026-03-15
@@ -65,7 +65,7 @@ and the project adheres to CalVer (`YYYY.MM.PATCH`).
   unreachable)
 - `post-cluster-setup.sh` installs local-path-provisioner (default
   StorageClass), Traefik IngressController on NodePort 30080/30443,
-  the `forge` namespace, plus pre-created `harbor-pull` and
-  `forge-tls` secrets
+  the `forail` namespace, plus pre-created `harbor-pull` and
+  `forail-tls` secrets
 - `shared/` directory mounted into every VM for kubeadm join tokens
   and `admin.conf` export

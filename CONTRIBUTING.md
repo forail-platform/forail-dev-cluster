@@ -1,8 +1,8 @@
-# Contributing to forge-dev-cluster
+# Contributing to forail-dev-cluster
 
 Thanks for your interest in contributing!
 
-The full contributing guide — git workflow, commit conventions, coding standards, PR process — lives in the [forge-deploy repository](https://github.com/forgeplatform/forge-devops/blob/main/docs/10-contributing-guide.md). Please read it before submitting a pull request.
+The full contributing guide — git workflow, commit conventions, coding standards, PR process — lives in the [forail-deploy repository](https://github.com/forail-platform/forail-devops/blob/main/docs/10-contributing-guide.md). Please read it before submitting a pull request.
 
 ## What lives here
 
@@ -11,8 +11,8 @@ Vagrant-based local Kubernetes (k3s) cluster used for testing the operator, helm
 ## Quick start
 
 ```bash
-git clone https://github.com/forgeplatform/forge-dev-cluster.git
-cd forge-dev-cluster
+git clone https://github.com/forail-platform/forail-dev-cluster.git
+cd forail-dev-cluster
 vagrant up
 vagrant ssh k8s-m1 -c "sudo kubectl get nodes"
 ```

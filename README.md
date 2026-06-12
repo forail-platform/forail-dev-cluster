@@ -1,11 +1,11 @@
-# forge-dev-cluster
+# forail-dev-cluster
 
-[![CI](https://github.com/forgeplatform/forge-dev-cluster/actions/workflows/ci.yml/badge.svg)](https://github.com/forgeplatform/forge-dev-cluster/actions/workflows/ci.yml)
+[![CI](https://github.com/forail-platform/forail-dev-cluster/actions/workflows/ci.yml/badge.svg)](https://github.com/forail-platform/forail-dev-cluster/actions/workflows/ci.yml)
 
 A 7-node Kubernetes test cluster (3 control-plane + 4 worker) on Vagrant +
-VirtualBox/libvirt. Used as the development / test environment for the Forge
-Platform components (`forge-deploy` k8s manifests, `forge-operator`,
-`forge-helm`).
+VirtualBox/libvirt. Used as the development / test environment for the Forail
+Platform components (`forail-deploy` k8s manifests, `forail-operator`,
+`forail-helm`).
 
 Powered by **k3s** (lightweight upstream-conformant Kubernetes), which bundles
 Traefik (default ingress) and local-path-provisioner (default StorageClass)
@@ -46,7 +46,7 @@ Total footprint: **14 vCPU, 28 GB RAM**.
 ```bash
 vagrant up                  # ~5–10 min on a cached box
 
-# Create forge namespace + secrets (Traefik and local-path are already up)
+# Create forail namespace + secrets (Traefik and local-path are already up)
 vagrant ssh k8s-m1 -c "bash /vagrant/scripts/post-cluster-setup.sh"
 
 # Verify
@@ -64,19 +64,19 @@ kubectl get nodes
 
 ## After cluster is up
 
-This repo only stands up an empty cluster. Forge core and operator
+This repo only stands up an empty cluster. Forail core and operator
 deploy from their own repos:
 
 ```bash
-# Forge core
-helm install forge ../forge-helm -n forge
+# Forail core
+helm install forail ../forail-helm -n forail
 
-# forge-operator
-TOKEN=$(kubectl -n forge exec deploy/forge-web -- \
-    forge-manage create_oauth2_token --user admin | tail -1)
-helm install forge-operator ../forge-operator/helm \
-    -n forge-operator --create-namespace \
-    --set forge.token=$TOKEN
+# forail-operator
+TOKEN=$(kubectl -n forail exec deploy/forail-web -- \
+    forail-manage create_oauth2_token --user admin | tail -1)
+helm install forail-operator ../forail-operator/helm \
+    -n forail-operator --create-namespace \
+    --set forail.token=$TOKEN
 ```
 
 ## Tear down
@@ -91,14 +91,14 @@ from scratch — provisioning is idempotent.
 ## Layout
 
 ```
-forge-dev-cluster/
+forail-dev-cluster/
 ├── Vagrantfile               # 7-VM multi-machine config
 ├── scripts/
 │   ├── common.sh             # host prep (swap, hosts, sysctl)
 │   ├── server-init.sh        # k3s server --cluster-init on k8s-m1
 │   ├── server-join.sh        # k3s server --server (k8s-m2, k8s-m3)
 │   ├── agent-join.sh         # k3s agent join (k8s-w1..w4)
-│   └── post-cluster-setup.sh # forge namespace + harbor-pull + forge-tls
+│   └── post-cluster-setup.sh # forail namespace + harbor-pull + forail-tls
 └── shared/                   # synced /vagrant/shared (admin.conf export)
 ```
 
