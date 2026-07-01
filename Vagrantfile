@@ -56,6 +56,12 @@ Vagrant.configure("2") do |config|
         vb.cpus   = node[:cpus]
         vb.memory = node[:mem]
         vb.linked_clone = true
+        # VBox 7.2 + recent host kernels feed a bad kvmclock to the guest,
+        # causing rcu_preempt stalls (jiffies jumping) that hang
+        # systemd-networkd/-resolved so sshd never comes up. Disabling the
+        # KVM paravirt clock (legacy => effective "none") makes the guest use
+        # the hardware clock and boots reliably.
+        vb.customize ["modifyvm", :id, "--paravirtprovider", "legacy"]
       end
 
       vm.vm.provider "libvirt" do |lv|
