@@ -25,6 +25,11 @@
 #   vagrant destroy -f
 
 # Pre-shared token for all k3s nodes. Dev-only — do not reuse for prod.
+# needtofix L19/L20 (accepted, dev-only): this is a local throwaway Vagrant
+# cluster on a private host-only network. The hardcoded join token, the
+# world-readable kubeconfig (0644, so the host can read the synced admin.conf),
+# and the unpinned curl|sh k3s install are deliberate dev conveniences. NEVER
+# expose this cluster or reuse these values outside local development.
 K3S_TOKEN = "forail-dev-cluster-shared-token-do-not-reuse"
 K3S_VERSION = "v1.30.4+k3s1"
 INIT_SERVER_IP = "192.168.56.30"
