@@ -54,6 +54,9 @@ done
 
 # Publish kubeconfig with the right server URL (default is 127.0.0.1)
 # so the host can use it directly via $KUBECONFIG=shared/admin.conf.
+# needtofix L19 (accepted, dev-only): 0644 is required so the host user can
+# read the Vagrant-synced admin.conf. This grants cluster-admin to anyone with
+# the file — fine for a local throwaway cluster only.
 sed "s|server: https://127.0.0.1:6443|server: https://${NODE_IP}:6443|" \
     /etc/rancher/k3s/k3s.yaml > "$SHARED_DIR/admin.conf"
 chmod 644 "$SHARED_DIR/admin.conf"
