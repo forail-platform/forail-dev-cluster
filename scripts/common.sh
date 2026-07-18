@@ -49,7 +49,24 @@ net.ipv4.ip_forward                 = 1
 EOF
 sysctl --system >/dev/null
 
-echo "[3/3] Installing prereq tooling..."
+echo "[3/4] Kernel console + vmwgfx blacklist..."
+# vmwgfx bound to VirtualBox's SVGA device logs "running on an unsupported
+# hypervisor / this configuration is likely broken". The Vagrantfile already
+# picks vboxvga so it never loads; this covers a VM whose graphics controller
+# got switched back by hand. Cosmetic -- it is not what used to hang boots.
+cat > /etc/modprobe.d/blacklist-vmwgfx.conf <<EOF
+blacklist vmwgfx
+EOF
+
+# Mirror the kernel console onto ttyS0, which the Vagrantfile captures to
+# logs/<node>-serial.log on the host. Without this the serial file stays empty
+# and a hung boot leaves no evidence beyond a screenshot.
+if ! grep -q "console=ttyS0" /etc/default/grub; then
+  sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"$/GRUB_CMDLINE_LINUX_DEFAULT="\1 console=tty0 console=ttyS0,115200n8"/' /etc/default/grub
+  update-grub >/dev/null 2>&1 || true
+fi
+
+echo "[4/4] Installing prereq tooling..."
 apt-get update -qq
 apt-get install -y -qq curl ca-certificates open-iscsi nfs-common conntrack ipset
 
