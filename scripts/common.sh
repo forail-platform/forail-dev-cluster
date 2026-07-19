@@ -61,9 +61,25 @@ EOF
 # Mirror the kernel console onto ttyS0, which the Vagrantfile captures to
 # logs/<node>-serial.log on the host. Without this the serial file stays empty
 # and a hung boot leaves no evidence beyond a screenshot.
-if ! grep -q "console=ttyS0" /etc/default/grub; then
-  sed -i 's/^GRUB_CMDLINE_LINUX_DEFAULT="\(.*\)"$/GRUB_CMDLINE_LINUX_DEFAULT="\1 console=tty0 console=ttyS0,115200n8"/' /etc/default/grub
-  update-grub >/dev/null 2>&1 || true
+#
+# This goes on GRUB_CMDLINE_LINUX, NOT ..._DEFAULT. The box ships
+#   GRUB_CMDLINE_LINUX_DEFAULT="autoinstall ds=nocloud-net;s=http://..."
+# and that ';' is a statement separator to GRUB's parser, so everything
+# appended after it is silently dropped -- the guest boots with no console=
+# and the serial log stays empty. GRUB_CMDLINE_LINUX has no such trap.
+CONSOLE_ARGS="console=tty0 console=ttyS0,115200n8"
+# Drop it from ..._DEFAULT, where an earlier version of this script put it and
+# where the ';' above renders it inert.
+sed -i "s| ${CONSOLE_ARGS}||" /etc/default/grub
+if ! grep -q "^GRUB_CMDLINE_LINUX=.*console=ttyS0" /etc/default/grub; then
+  sed -i "s|^GRUB_CMDLINE_LINUX=\"\(.*\)\"$|GRUB_CMDLINE_LINUX=\"\1 ${CONSOLE_ARGS}\"|" /etc/default/grub
+fi
+if ! update-grub 2>&1; then
+  echo "[common] WARNING: update-grub failed; serial console will not be captured"
+fi
+# Confirm it will actually take effect on the next boot rather than assuming.
+if ! grep -q "console=ttyS0" /boot/grub/grub.cfg 2>/dev/null; then
+  echo "[common] WARNING: console=ttyS0 missing from grub.cfg after update-grub"
 fi
 
 echo "[4/4] Installing prereq tooling..."
