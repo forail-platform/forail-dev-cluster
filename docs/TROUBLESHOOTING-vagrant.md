@@ -49,31 +49,39 @@ above; same root cause, softer failure.
 
 ### Fix
 
-Keep KVM off the host while the VirtualBox cluster is in use:
+**Do not run a KVM guest and this cluster at the same time.** One hypervisor
+owns AMD-V per boot; there is no setting that makes them share it.
+
+This host also runs a `vagrant-libvirt` lab out of
+`~/repos/vagrant-proxmox/test-lab`, which is a KVM guest. Bringing it up while
+the cluster is running is what kills the cluster — and the reverse is equally
+true. Check before starting either:
 
 ```bash
-# stop the daemon that pulls in kvm_amd, and its socket activation
-sudo systemctl disable --now libvirtd.service libvirtd.socket \
-    libvirtd-ro.socket libvirtd-admin.socket \
-    virtlogd.service virtlogd.socket virtlogd-admin.socket
-
-# release AMD-V
-sudo modprobe -r kvm_amd kvm
-
-# keep it released across reboots
-printf 'blacklist kvm_amd\nblacklist kvm\ninstall kvm_amd /bin/false\ninstall kvm /bin/false\n' \
-  | sudo tee /etc/modprobe.d/00-virtualbox-no-kvm.conf
+vagrant global-status | grep -E 'libvirt.*running'   # KVM guests
+pgrep -af 'qemu-system.*-accel kvm'
 ```
 
-Verify — this must print nothing:
+If one is running, stop it first:
 
 ```bash
-lsmod | grep '^kvm'
+cd ~/repos/vagrant-proxmox/test-lab && vagrant halt
 ```
 
-To go back to KVM/libvirt later, delete
-`/etc/modprobe.d/00-virtualbox-no-kvm.conf`, re-enable `libvirtd`, and reboot.
-VirtualBox will then be the one that breaks, so pick one hypervisor per boot.
+`scripts/up.sh` refuses to start when it sees a live KVM guest, so in practice
+you get a clear error instead of six VMs dying mid-run.
+
+Do **not** blacklist `kvm`/`kvm_amd` on this host — that would break the
+libvirt lab. Blacklisting is only appropriate on a machine where KVM is
+genuinely unused, and even then `sudo systemctl disable --now libvirtd.socket`
+is usually enough, since it is socket activation that starts `libvirtd` on its
+own mid-run.
+
+Verify AMD-V is free before a cluster run — the reference count must be `0`:
+
+```bash
+lsmod | grep '^kvm_amd'
+```
 
 ### Things that are *not* the cause
 

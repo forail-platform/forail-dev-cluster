@@ -31,6 +31,24 @@ else
   NODES=("${ALL_NODES[@]}")
 fi
 
+# One hypervisor owns AMD-V per boot. If a KVM guest is live, VirtualBox loses
+# the virtualisation extensions and every VM dies mid-run with
+# "Guru Meditation VERR_SVM_IN_USE" -- so refuse now, with a message, rather
+# than after twenty minutes of provisioning.
+kvm_refs="$(awk '$1 == "kvm_amd" || $1 == "kvm_intel" { print $3 }' /proc/modules | head -1)"
+if [ -n "${kvm_refs:-}" ] && [ "$kvm_refs" -gt 0 ]; then
+  echo "[up] REFUSING: a KVM guest is running and holds the CPU's virtualisation"
+  echo "[up] extensions. VirtualBox cannot share them -- see"
+  echo "[up] docs/TROUBLESHOOTING-vagrant.md. Live KVM guests:"
+  # A qemu command line runs to thousands of characters; print the guest name.
+  pgrep -af 'qemu-system.*-accel kvm' \
+    | sed -E 's/^([0-9]+).*-name guest=([^,[:space:]]+).*/[up]   pid \1  \2/' || true
+  vagrant global-status 2>/dev/null | grep -E 'libvirt.*running' \
+    | awk '{ print "[up]   " $1 "  " $NF }' || true
+  echo "[up] Stop them (e.g. 'vagrant halt' in that project) and re-run."
+  exit 1
+fi
+
 failed=()
 
 for node in "${NODES[@]}"; do
