@@ -8,6 +8,20 @@ and the project adheres to CalVer (`YYYY.MM.PATCH`).
 
 ## [Unreleased]
 
+### Fixed
+- **Boot hang on VirtualBox 7.2 + recent host kernels**: the guests are started
+  with the KVM paravirtual clock disabled (`no-kvmclock`,
+  `--paravirtprovider none`). The bad kvmclock caused `rcu_preempt` stalls that
+  hung `systemd-networkd`/`-resolved`, so `sshd` never came up and `vagrant up`
+  timed out mid-provision.
+
+### Security
+- **Dev-only tradeoffs are now flagged in-tree** rather than left implicit: the
+  hardcoded k3s join token, the world-readable synced `admin.conf`, and the
+  unpinned k3s installer are deliberate conveniences for this throwaway local
+  cluster. They are documented as *not* to be copied into, or exposed by, any
+  shared or internet-reachable environment.
+
 ## [2026.06.0] - 2026-06-14
 
 ### Changed
