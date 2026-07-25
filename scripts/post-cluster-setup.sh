@@ -8,7 +8,7 @@
 #   * CoreDNS, metrics-server
 #
 # So this script only creates the forail namespace and its prerequisite
-# secrets (Harbor pull credentials + self-signed TLS for forail.local).
+# secrets (Harbor pull credentials + self-signed TLS for forail.lan).
 # Idempotent — re-run safely.
 #
 # Usage:
@@ -33,12 +33,12 @@ $KUBECTL -n forail create secret docker-registry harbor-pull \
     --docker-password="$HARBOR_PASS" \
     --dry-run=client -o yaml | $KUBECTL apply -f -
 
-echo "[3/4] Generating self-signed TLS cert for forail.local..."
+echo "[3/4] Generating self-signed TLS cert for forail.lan..."
 TLS_DIR=$(mktemp -d)
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
     -keyout "$TLS_DIR/tls.key" -out "$TLS_DIR/tls.crt" \
-    -subj '/CN=forail.local/O=Forail Dev' \
-    -addext 'subjectAltName=DNS:forail.local,DNS:*.forail.local,IP:192.168.56.30,IP:192.168.56.31,IP:192.168.56.32,IP:192.168.56.33,IP:192.168.56.34,IP:192.168.56.35,IP:192.168.56.36' 2>/dev/null
+    -subj '/CN=forail.lan/O=Forail Dev' \
+    -addext 'subjectAltName=DNS:forail.lan,DNS:*.forail.lan,IP:192.168.56.30,IP:192.168.56.31,IP:192.168.56.32,IP:192.168.56.33,IP:192.168.56.34,IP:192.168.56.35,IP:192.168.56.36' 2>/dev/null
 $KUBECTL -n forail create secret tls forail-tls \
     --cert="$TLS_DIR/tls.crt" --key="$TLS_DIR/tls.key" \
     --dry-run=client -o yaml | $KUBECTL apply -f -
@@ -74,8 +74,8 @@ cat <<EOF
 
  Browser access (after Forail install):
 
-   http://forail.local        (Traefik LoadBalancer on :80)
-   https://forail.local       (Traefik LoadBalancer on :443, self-signed)
-   /etc/hosts:  192.168.56.33  forail.local   # any worker IP works
+   http://forail.lan        (Traefik LoadBalancer on :80)
+   https://forail.lan       (Traefik LoadBalancer on :443, self-signed)
+   /etc/hosts:  192.168.56.33  forail.lan   # any worker IP works
 
 EOF
