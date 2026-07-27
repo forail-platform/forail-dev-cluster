@@ -31,10 +31,31 @@ else
   NODES=("${ALL_NODES[@]}")
 fi
 
-# One hypervisor owns AMD-V per boot. If a KVM guest is live, VirtualBox loses
-# the virtualisation extensions and every VM dies mid-run with
-# "Guru Meditation VERR_SVM_IN_USE" -- so refuse now, with a message, rather
-# than after twenty minutes of provisioning.
+# One hypervisor owns AMD-V per boot. If KVM holds it, VirtualBox loses the
+# virtualisation extensions and every VM dies mid-run with "Guru Meditation
+# VERR_SVM_IN_USE" -- so refuse now, with a message, rather than after twenty
+# minutes of provisioning.
+#
+# This is why VirtualBox is the only supported provider here and libvirt is kept
+# off the host entirely (daemon masked, vagrant-libvirt not installed). The two
+# checks below are tripwires for a host where that has been undone.
+#
+# libvirtd is checked as a daemon, not only via the module refcount: on
+# 2026-07-26 the cluster was killed twice with no guest running at all -- the
+# daemon being active was enough, and it starts itself, being socket-activated.
+# Do NOT call `vagrant global-status` here; that call is one of the things that
+# used to wake libvirtd up.
+if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet libvirtd 2>/dev/null; then
+  echo "[up] REFUSING: libvirtd is running. It holds /dev/kvm and VirtualBox"
+  echo "[up] cannot share the CPU's virtualisation extensions with it -- the VMs"
+  echo "[up] will die with Guru Meditation VERR_SVM_IN_USE, with or without a"
+  echo "[up] live guest. libvirt is not used by this project; keep it masked:"
+  echo "[up]   sudo systemctl disable --now libvirtd.service libvirtd{,-ro,-admin}.socket"
+  echo "[up]   sudo systemctl mask    libvirtd.service libvirtd{,-ro,-admin}.socket"
+  echo "[up] See docs/TROUBLESHOOTING-vagrant.md."
+  exit 1
+fi
+
 kvm_refs="$(awk '$1 == "kvm_amd" || $1 == "kvm_intel" { print $3 }' /proc/modules | head -1)"
 if [ -n "${kvm_refs:-}" ] && [ "$kvm_refs" -gt 0 ]; then
   echo "[up] REFUSING: a KVM guest is running and holds the CPU's virtualisation"
@@ -43,9 +64,7 @@ if [ -n "${kvm_refs:-}" ] && [ "$kvm_refs" -gt 0 ]; then
   # A qemu command line runs to thousands of characters; print the guest name.
   pgrep -af 'qemu-system.*-accel kvm' \
     | sed -E 's/^([0-9]+).*-name guest=([^,[:space:]]+).*/[up]   pid \1  \2/' || true
-  vagrant global-status 2>/dev/null | grep -E 'libvirt.*running' \
-    | awk '{ print "[up]   " $1 "  " $NF }' || true
-  echo "[up] Stop them (e.g. 'vagrant halt' in that project) and re-run."
+  echo "[up] Stop them and re-run."
   exit 1
 fi
 
