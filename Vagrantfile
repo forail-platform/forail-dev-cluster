@@ -25,6 +25,12 @@ require "fileutils"
 #
 # Tear down:
 #   vagrant destroy -f
+#
+# VirtualBox is the only supported provider. libvirt/KVM is deliberately not
+# used: one hypervisor owns AMD-V per boot, so a live KVM guest kills every VM
+# here with "Guru Meditation VERR_SVM_IN_USE" (see
+# docs/TROUBLESHOOTING-vagrant.md).
+ENV["VAGRANT_DEFAULT_PROVIDER"] ||= "virtualbox"
 
 # Pre-shared token for all k3s nodes. Dev-only — do not reuse for prod.
 # needtofix L19/L20 (accepted, dev-only): this is a local throwaway Vagrant
@@ -61,7 +67,7 @@ Vagrant.configure("2") do |config|
   config.vm.boot_timeout = 600
 
   # /vagrant exposes scripts to every VM and lets m1 publish admin.conf
-  # back to the host. Default sync is bidirectional on virtualbox/libvirt.
+  # back to the host. Default sync is bidirectional on virtualbox.
   config.vm.synced_folder ".", "/vagrant"
 
   NODES.each do |node|
@@ -96,11 +102,6 @@ Vagrant.configure("2") do |config|
         vb.customize ["modifyvm", :id, "--uart1", "0x3F8", "4"]
         vb.customize ["modifyvm", :id, "--uartmode1", "file",
                       File.join(SERIAL_LOG_DIR, "#{node[:name]}-serial.log")]
-      end
-
-      vm.vm.provider "libvirt" do |lv|
-        lv.cpus   = node[:cpus]
-        lv.memory = node[:mem]
       end
 
       # 1) Common prep (swap off, hosts file, sysctl)
