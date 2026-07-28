@@ -49,38 +49,37 @@ above; same root cause, softer failure.
 
 ### Fix
 
-**Do not run a KVM guest and this cluster at the same time.** One hypervisor
-owns AMD-V per boot; there is no setting that makes them share it.
-
-This host also runs a `vagrant-libvirt` lab out of
-`~/repos/vagrant-proxmox/test-lab`, which is a KVM guest. Bringing it up while
-the cluster is running is what kills the cluster — and the reverse is equally
-true. Check before starting either:
+**VirtualBox is the only supported provider, and libvirt/KVM is kept off the
+host.** One hypervisor owns AMD-V per boot; there is no setting that makes them
+share it, so the fix is to remove the competition rather than to schedule
+around it:
 
 ```bash
-vagrant global-status | grep -E 'libvirt.*running'   # KVM guests
-pgrep -af 'qemu-system.*-accel kvm'
+sudo systemctl disable --now libvirtd.service libvirtd{,-ro,-admin}.socket
+sudo systemctl mask    libvirtd.service libvirtd{,-ro,-admin}.socket
+vagrant plugin uninstall vagrant-libvirt    # if it was ever installed
 ```
 
-If one is running, stop it first:
+A live guest is not the only trigger: `libvirtd` merely being *active* was
+enough to kill a running cluster, and it starts itself, being socket-activated.
+Masking the sockets is what actually stops that; disabling the service alone
+does not.
 
-```bash
-cd ~/repos/vagrant-proxmox/test-lab && vagrant halt
-```
+Do **not** blacklist `kvm`/`kvm_amd`. Masking `libvirtd` is sufficient and
+reversible, and blacklisting breaks any other KVM tooling on the machine.
 
-`scripts/up.sh` refuses to start when it sees a live KVM guest, so in practice
-you get a clear error instead of six VMs dying mid-run.
+`scripts/up.sh` refuses to start if it finds `libvirtd` active or a live KVM
+guest, so you get a clear error instead of six VMs dying mid-run. It does not
+call `vagrant global-status` — that call is one of the things that used to wake
+`libvirtd` up.
 
-Do **not** blacklist `kvm`/`kvm_amd` on this host — that would break the
-libvirt lab. Blacklisting is only appropriate on a machine where KVM is
-genuinely unused, and even then `sudo systemctl disable --now libvirtd.socket`
-is usually enough, since it is socket activation that starts `libvirtd` on its
-own mid-run.
-
-Verify AMD-V is free before a cluster run — the reference count must be `0`:
+Verify AMD-V is free before a cluster run — the reference count must be `0`,
+and nothing should be holding it:
 
 ```bash
 lsmod | grep '^kvm_amd'
+systemctl is-active libvirtd            # expect: inactive (or: masked)
+pgrep -af 'qemu-system.*-accel kvm'     # expect: no output
 ```
 
 ### Things that are *not* the cause
