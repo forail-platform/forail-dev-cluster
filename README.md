@@ -3,7 +3,7 @@
 [![CI](https://github.com/forail-platform/forail-dev-cluster/actions/workflows/ci.yml/badge.svg)](https://github.com/forail-platform/forail-dev-cluster/actions/workflows/ci.yml)
 
 A 7-node Kubernetes test cluster (3 control-plane + 4 worker) on Vagrant +
-VirtualBox/libvirt. Used as the development / test environment for the Forail
+VirtualBox. Used as the development / test environment for the Forail
 Platform components (`forail-deploy` k8s manifests, `forail-operator`,
 `forail-helm`).
 
@@ -36,7 +36,9 @@ Total footprint: **14 vCPU, 28 GB RAM**.
 
 ## Prerequisites
 
-* VirtualBox 7.0+ (or libvirt as alt provider)
+* VirtualBox 7.0+ — the only supported provider. Do not run libvirt/KVM on the
+  same host: one hypervisor owns AMD-V per boot, so a live KVM guest kills every
+  VM here (see [docs/TROUBLESHOOTING-vagrant.md](docs/TROUBLESHOOTING-vagrant.md))
 * Vagrant 2.4+
 * ~32 GB RAM free on the host
 * Ports 22, 6443, 80, 443 free on the 192.168.56.0/24 host-only network
@@ -114,7 +116,7 @@ forail-dev-cluster/
   host-only networking in a bad state** due to apiserver↔kubelet TLS
   handshake timeouts. Symptom: workers flap `NotReady`, NodePorts return
   Connection refused. Fix: `vagrant destroy -f && vagrant up`.
-  Does not happen on baremetal or libvirt.
+  Does not happen on baremetal.
 * **etcd quorum requires at least 2 of 3 servers** to stay online — if you
   `vagrant halt k8s-m1 k8s-m2` simultaneously, the API server on m3 will
   go read-only until quorum returns.

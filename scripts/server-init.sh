@@ -70,5 +70,16 @@ chown -R vagrant:vagrant /home/vagrant/.kube
 # Symlink k3s' kubectl to /usr/local/bin in case anything looks for it there.
 ln -sf /usr/local/bin/k3s /usr/local/bin/kubectl 2>/dev/null || true
 
+# Helm. scripts/install-forail.sh -- the documented way to put Forail into this
+# cluster -- runs on a control-plane node and calls helm directly, but nothing
+# here ever installed it. On a cluster that had been up for a while this went
+# unnoticed because helm had been installed by hand; a freshly created one fails
+# with "sudo: helm: command not found" at the first install step.
+if ! command -v helm >/dev/null 2>&1; then
+    echo "[server-init] Installing helm..."
+    curl -sfL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash \
+        || echo "[server-init] WARNING: helm install failed -- install-forail.sh will not run"
+fi
+
 echo "[server-init] Done."
 kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml get nodes -o wide || true

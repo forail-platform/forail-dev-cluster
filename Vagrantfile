@@ -1,6 +1,8 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 #
+require "fileutils"
+#
 # Forail Platform — k8s test environment (multi-VM, HA control plane)
 #
 # Layout:
@@ -23,6 +25,12 @@
 #
 # Tear down:
 #   vagrant destroy -f
+#
+# VirtualBox is the only supported provider. libvirt/KVM is deliberately not
+# used: one hypervisor owns AMD-V per boot, so a live KVM guest kills every VM
+# here with "Guru Meditation VERR_SVM_IN_USE" (see
+# docs/TROUBLESHOOTING-vagrant.md).
+ENV["VAGRANT_DEFAULT_PROVIDER"] ||= "virtualbox"
 
 # Pre-shared token for all k3s nodes. Dev-only — do not reuse for prod.
 # needtofix L19/L20 (accepted, dev-only): this is a local throwaway Vagrant
@@ -33,6 +41,12 @@
 K3S_TOKEN = "forail-dev-cluster-shared-token-do-not-reuse"
 K3S_VERSION = "v1.30.4+k3s1"
 INIT_SERVER_IP = "192.168.56.30"
+
+# Per-VM serial console logs land here so a boot that never reaches sshd still
+# leaves a full kernel log on the host. Without this the only evidence is a
+# screenshot of the last 40 lines of the VT.
+SERIAL_LOG_DIR = File.join(File.dirname(__FILE__), "logs")
+FileUtils.mkdir_p(SERIAL_LOG_DIR)
 
 NODES = [
   { name: "k8s-m1", ip: "192.168.56.30", role: "server-init", cpus: 2, mem: 4096 },
@@ -47,8 +61,13 @@ NODES = [
 Vagrant.configure("2") do |config|
   config.vm.box = "bento/ubuntu-24.04"
 
+  # The guest is only reachable once systemd-networkd has configured eth1, and
+  # that is exactly the step that used to wedge. 600s gives a slow-but-healthy
+  # boot room to finish instead of failing the run at Vagrant's 300s default.
+  config.vm.boot_timeout = 600
+
   # /vagrant exposes scripts to every VM and lets m1 publish admin.conf
-  # back to the host. Default sync is bidirectional on virtualbox/libvirt.
+  # back to the host. Default sync is bidirectional on virtualbox.
   config.vm.synced_folder ".", "/vagrant"
 
   NODES.each do |node|
@@ -67,11 +86,22 @@ Vagrant.configure("2") do |config|
         # KVM paravirt clock (legacy => effective "none") makes the guest use
         # the hardware clock and boots reliably.
         vb.customize ["modifyvm", :id, "--paravirtprovider", "legacy"]
-      end
 
-      vm.vm.provider "libvirt" do |lv|
-        lv.cpus   = node[:cpus]
-        lv.memory = node[:mem]
+        # Headless k3s nodes need a text console and nothing more. vboxvga
+        # keeps that while avoiding vmsvga, which makes the Linux guest bind
+        # the VMware vmwgfx driver to VirtualBox's partial SVGA device --
+        # vmwgfx then logs "running on an unsupported hypervisor / this
+        # configuration is likely broken". Tidiness, not a bug fix: the boot
+        # hangs this repo used to see came from KVM stealing AMD-V, not from
+        # the graphics device (see docs/TROUBLESHOOTING-vagrant.md).
+        vb.customize ["modifyvm", :id, "--graphicscontroller", "vboxvga"]
+        vb.customize ["modifyvm", :id, "--vram", "16"]
+
+        # Log the guest kernel console to the host, so a boot that never gets
+        # to sshd is still diagnosable (see SERIAL_LOG_DIR above).
+        vb.customize ["modifyvm", :id, "--uart1", "0x3F8", "4"]
+        vb.customize ["modifyvm", :id, "--uartmode1", "file",
+                      File.join(SERIAL_LOG_DIR, "#{node[:name]}-serial.log")]
       end
 
       # 1) Common prep (swap off, hosts file, sysctl)
