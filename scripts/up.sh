@@ -16,6 +16,11 @@
 #   scripts/up.sh                 # whole cluster, in dependency order
 #   scripts/up.sh k8s-w1 k8s-w2   # only these nodes
 #   RETRIES=5 scripts/up.sh       # override the retry budget (default 3)
+#
+#   FORAIL_CLUSTER_PROFILE=minimal scripts/up.sh   # server + agent only
+#
+# The profile has to match the one the Vagrantfile is reading, or this
+# script waits on nodes that were never defined.
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
@@ -24,7 +29,17 @@ RETRIES="${RETRIES:-3}"
 
 # m1 initialises etcd; the other servers join it, and agents join the cluster.
 # Order matters, so keep m1 first.
-ALL_NODES=(k8s-m1 k8s-m2 k8s-m3 k8s-w1 k8s-w2 k8s-w3 k8s-w4)
+#
+# Keep these lists in step with PROFILES in the Vagrantfile.
+case "${FORAIL_CLUSTER_PROFILE:-full}" in
+  full)    ALL_NODES=(k8s-m1 k8s-m2 k8s-m3 k8s-w1 k8s-w2 k8s-w3 k8s-w4) ;;
+  minimal) ALL_NODES=(k8s-m1 k8s-w1) ;;
+  single)  ALL_NODES=(k8s-m1) ;;
+  *)
+    echo "FORAIL_CLUSTER_PROFILE must be full, minimal or single, got '${FORAIL_CLUSTER_PROFILE}'" >&2
+    exit 1
+    ;;
+esac
 if [ "$#" -gt 0 ]; then
   NODES=("$@")
 else

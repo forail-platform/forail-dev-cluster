@@ -48,7 +48,7 @@ INIT_SERVER_IP = "192.168.56.30"
 SERIAL_LOG_DIR = File.join(File.dirname(__FILE__), "logs")
 FileUtils.mkdir_p(SERIAL_LOG_DIR)
 
-NODES = [
+ALL_NODES = [
   { name: "k8s-m1", ip: "192.168.56.30", role: "server-init", cpus: 2, mem: 4096 },
   { name: "k8s-m2", ip: "192.168.56.31", role: "server-join", cpus: 2, mem: 4096 },
   { name: "k8s-m3", ip: "192.168.56.32", role: "server-join", cpus: 2, mem: 4096 },
@@ -57,6 +57,39 @@ NODES = [
   { name: "k8s-w3", ip: "192.168.56.35", role: "agent",       cpus: 2, mem: 4096 },
   { name: "k8s-w4", ip: "192.168.56.36", role: "agent",       cpus: 2, mem: 4096 },
 ]
+
+# The full layout asks VirtualBox for 28 GB. On a 32 GB workstation that
+# leaves the host nothing, and it does not fail cleanly -- the machine
+# swaps itself to a standstill and has to be reset. Sizing is also not the
+# only cost of node count: roughly one boot in five wedges (see the
+# boot_timeout comment below), so seven nodes almost always pay for at
+# least one destroy-and-retry, while two usually pay for none.
+#
+#   FORAIL_CLUSTER_PROFILE=minimal vagrant up    # server + agent, 12 GB
+#   FORAIL_CLUSTER_PROFILE=single  vagrant up    # server only,     8 GB
+#   vagrant up                                   # all seven,      28 GB
+#
+# `minimal` keeps a separate agent on purpose: a single k3s server runs
+# pods itself, so a one-node cluster cannot show that a workload is
+# actually scheduled onto a node that is not the control plane.
+PROFILES = {
+  "full"    => { names: ALL_NODES.map { |n| n[:name] }, mem: 4096 },
+  "minimal" => { names: %w[k8s-m1 k8s-w1],              mem: 6144 },
+  "single"  => { names: %w[k8s-m1],                     mem: 8192 },
+}
+
+CLUSTER_PROFILE = ENV.fetch("FORAIL_CLUSTER_PROFILE", "full")
+unless PROFILES.key?(CLUSTER_PROFILE)
+  abort "FORAIL_CLUSTER_PROFILE must be one of #{PROFILES.keys.join(', ')}, got #{CLUSTER_PROFILE.inspect}"
+end
+
+profile   = PROFILES.fetch(CLUSTER_PROFILE)
+NODE_MEM  = Integer(ENV.fetch("FORAIL_NODE_MEM",  profile[:mem].to_s))
+NODE_CPUS = Integer(ENV.fetch("FORAIL_NODE_CPUS", "2"))
+
+NODES = ALL_NODES
+        .select { |n| profile[:names].include?(n[:name]) }
+        .map    { |n| n.merge(mem: NODE_MEM, cpus: NODE_CPUS) }
 
 Vagrant.configure("2") do |config|
   config.vm.box = "bento/ubuntu-24.04"
