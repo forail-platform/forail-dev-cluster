@@ -90,7 +90,11 @@ Ruled out while chasing this, recorded so nobody re-runs the same dead ends:
 - **x2APIC.** The guest never enables it —
   `x2apic: IRQ remapping doesn't support X2APIC mode`.
 - **kvmclock.** `--paravirtprovider legacy` is applied and effective
-  (`effparavirtprovider=none`); the hangs happened anyway.
+  (`effparavirtprovider=none`); the hangs happened anyway. Measured directly on
+  2026-08-14, 16 boots per setting with `vagrant up --no-provision`: `legacy`
+  wedged 3 of 16, `default` wedged 3 of 16. The setting makes no difference to
+  the wedge rate, so do not spend another afternoon on it. (A first round of 6
+  per setting read 0/6 against 2/6 and looked conclusive; it was noise.)
 - **`WARNING ... at kernel/rcu/tree_plugin.h:734 rcu_sched_clock_irq`.** This
   fires while udev probes modules on *every* boot of this box, including boots
   that go on to be perfectly healthy. It is noise, not the discriminator.
@@ -120,6 +124,26 @@ For a VM that died rather than hung, the reason is near the end of
 grep -E "Guru Meditation|VERR_|Machine state changed" \
   "$HOME/VirtualBox VMs/<node>/Logs/VBox.log"
 ```
+
+## Destroying a server node takes the control plane with it
+
+`vagrant destroy k8s-m2` on a *server* node does not remove it from the
+embedded etcd cluster. With `k8s-m1` and `k8s-m2` up, etcd has two members and
+quorum is two — so destroying one leaves the survivor unable to elect a leader.
+`k8s-m1` then sits in an endless pre-vote loop and its API server answers
+`ServiceUnavailable`, which looks like m1 having failed rather than m2 having
+been removed:
+
+```
+failed to get etcd MemberList: context deadline exceeded
+prober detected unhealthy status ... dial tcp 192.168.56.31:2380: connect: connection refused
+7a3a42e9f89c112c is starting a new election at term 2
+```
+
+Recover by destroying the whole cluster and bringing it up again; there is no
+state here worth saving. When testing one node's boot repeatedly, use
+`vagrant up <node> --no-provision` — the wedge being chased happens long before
+the provisioner runs, and skipping it keeps etcd out of the experiment.
 
 ## Bringing the cluster up
 
