@@ -64,7 +64,14 @@ Vagrant.configure("2") do |config|
   # The guest is only reachable once systemd-networkd has configured eth1, and
   # that is exactly the step that used to wedge. 600s gives a slow-but-healthy
   # boot room to finish instead of failing the run at Vagrant's 300s default.
-  config.vm.boot_timeout = 600
+  #
+  # A healthy node on this box reaches sshd in well under two minutes, so the
+  # remaining 500s are spent only on a node that is already wedged and never
+  # coming back. That is fine for an unattended run and painful while you are
+  # bisecting one, hence the override:
+  #
+  #   FORAIL_BOOT_TIMEOUT=180 vagrant up k8s-m1
+  config.vm.boot_timeout = Integer(ENV.fetch("FORAIL_BOOT_TIMEOUT", "600"))
 
   # /vagrant exposes scripts to every VM and lets m1 publish admin.conf
   # back to the host. Default sync is bidirectional on virtualbox.
