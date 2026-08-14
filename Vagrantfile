@@ -61,17 +61,17 @@ NODES = [
 Vagrant.configure("2") do |config|
   config.vm.box = "bento/ubuntu-24.04"
 
-  # The guest is only reachable once systemd-networkd has configured eth1, and
-  # that is exactly the step that used to wedge. 600s gives a slow-but-healthy
-  # boot room to finish instead of failing the run at Vagrant's 300s default.
+  # Measured on this host over 32 boots (2026-08-14): a healthy node reaches
+  # sshd in 39-44s, and a wedged one never reaches it at all -- the failure mode
+  # is a guest that stays up with rcu_preempt stalls and no network, which does
+  # not recover on its own. So every second past a healthy boot is spent only on
+  # nodes that are already lost, delaying the destroy-and-retry in scripts/up.sh
+  # that does fix them.
   #
-  # A healthy node on this box reaches sshd in well under two minutes, so the
-  # remaining 500s are spent only on a node that is already wedged and never
-  # coming back. That is fine for an unattended run and painful while you are
-  # bisecting one, hence the override:
-  #
-  #   FORAIL_BOOT_TIMEOUT=180 vagrant up k8s-m1
-  config.vm.boot_timeout = Integer(ENV.fetch("FORAIL_BOOT_TIMEOUT", "600"))
+  # 180s is roughly four times the observed healthy boot, which leaves room for
+  # a slow one, and cuts the cost of a wedge from 600s to 180s. About one boot
+  # in five wedges, so a seven-node run usually pays this at least once.
+  config.vm.boot_timeout = Integer(ENV.fetch("FORAIL_BOOT_TIMEOUT", "180"))
 
   # /vagrant exposes scripts to every VM and lets m1 publish admin.conf
   # back to the host. Default sync is bidirectional on virtualbox.
