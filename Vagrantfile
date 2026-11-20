@@ -92,7 +92,7 @@ NODES = ALL_NODES
         .map    { |n| n.merge(mem: NODE_MEM, cpus: NODE_CPUS) }
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "bento/ubuntu-24.04"
+  config.vm.box = "bento/ubuntu-26.04"
 
   # Measured on this host over 32 boots (2026-08-14): a healthy node reaches
   # sshd in 39-44s, and a wedged one never reaches it at all -- the failure mode
