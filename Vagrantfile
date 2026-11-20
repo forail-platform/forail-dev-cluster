@@ -59,7 +59,7 @@ NODES = [
 ]
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "bento/ubuntu-24.04"
+  config.vm.box = "bento/ubuntu-26.04"
 
   # The guest is only reachable once systemd-networkd has configured eth1, and
   # that is exactly the step that used to wedge. 600s gives a slow-but-healthy

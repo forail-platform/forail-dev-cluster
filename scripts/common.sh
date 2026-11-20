@@ -1,5 +1,5 @@
 #!/bin/bash
-# Common prep for every k3s node (Ubuntu 24.04).
+# Common prep for every k3s node (Ubuntu 26.04).
 # k3s ships its own containerd + kubelet bundle, so this only handles
 # host-level prerequisites: swap, /etc/hosts, sysctl, prereq tooling.
 set -euo pipefail

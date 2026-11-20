@@ -32,7 +32,7 @@ Total footprint: **14 vCPU, 28 GB RAM**.
 * **Storage:** local-path-provisioner (bundled, default StorageClass)
 * **LoadBalancer:** klipper-lb / servicelb (bundled)
 * **Runtime:** containerd (bundled inside k3s)
-* **Box:** `bento/ubuntu-24.04`
+* **Box:** `bento/ubuntu-26.04`
 
 ## Prerequisites
 
@@ -63,6 +63,17 @@ access:
 export KUBECONFIG=$PWD/shared/admin.conf
 kubectl get nodes
 ```
+
+## Installing on real servers (bare metal / cloud)
+
+The `scripts/` here are not Vagrant-only — the same `common.sh`,
+`server-init.sh` and `agent-join.sh` install k3s on real machines (e.g. 1
+master + N workers). You only need to change four lab-specific defaults first
+(Flannel interface, `/etc/hosts`, the join token, and the world-readable
+kubeconfig flag).
+
+See **[docs/INSTALL-baremetal.md](docs/INSTALL-baremetal.md)** for the full
+step-by-step guide, HA control-plane notes, and firewall ports.
 
 ## After cluster is up
 
